@@ -1,0 +1,21 @@
+# Credentials — never commit real values.
+# Copy secrets.example.yaml to secrets.yaml and fill it in.
+secrets.yaml
+*.env
+
+# ESPHome build cache and generated sources
+.esphome/
+build/
+.pioenvs/
+.piolibdeps/
+
+# Tooling scratch output
+.playwright-mcp/
+node_modules/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

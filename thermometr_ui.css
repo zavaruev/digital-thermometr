@@ -1,0 +1,767 @@
+/*
+ * Digital Thermometer — web UI stylesheet
+ *
+ * Implements the design language documented in DESIGN.md
+ * (Apple-design-analysis, version alpha). Token references below map
+ * 1:1 onto the `colors:` / `typography:` / `rounded:` / `spacing:` /
+ * `components:` keys of that file. No inline hex outside this block.
+ *
+ * Hard rules honoured here (see DESIGN.md "Do's and Don'ts"):
+ *  - one accent only: Action Blue #0066cc (links, CTAs, focus)
+ *  - no box-shadow anywhere (the single shadow is reserved for product
+ *    photography, and this UI carries no imagery)
+ *  - no decorative gradients
+ *  - no font-weight 500; ladder is 300 / 400 / 600
+ *  - full-bleed tiles stay rectangular; the colour change is the divider
+ *  - pills for actions, 8px for compact utility, 18px for utility cards,
+ *    11px only for the pearl capsule
+ *
+ * Hierarchy: the measurement is the interface. Everything diagnostic
+ * (radio, uptime, board, pinout) lives in one collapsed disclosure at the
+ * bottom of the dark band, set in caption/fine-print sizes.
+ */
+
+:root {
+  /* colors: Brand & Accent */
+  --primary: #0066cc;
+  --primary-focus: #0071e3;
+  --primary-on-dark: #2997ff;
+
+  /* colors: Surface */
+  --canvas: #ffffff;
+  --canvas-parchment: #f5f5f7;
+  --surface-pearl: #fafafc;
+  --surface-chip-translucent: #d2d2d7;
+  --tile-1: #272729;
+  --tile-2: #2a2a2c;
+  --tile-3: #252527;
+  --black: #000000;
+
+  /* colors: Text */
+  --ink: #1d1d1f;
+  --body-on-dark: #ffffff;
+  --body-muted: #cccccc;
+  --ink-muted-80: #333333;
+  --ink-muted-48: #7a7a7a;
+
+  /* colors: Hairlines & Borders */
+  --divider-soft: #f0f0f0;
+  --hairline: #e0e0e0;
+
+  --on-primary: #ffffff;
+
+  /* dark theme: not in DESIGN.md (it lists dark surfaces as a known gap), so
+   * it is built by inverting the same tokens rather than introducing new hues:
+   *   canvas            -> surface-black     #000000
+   *   parchment / footer-> surface-tile-3    #252527
+   *   dark band         -> surface-tile-1    #272729
+   *   hairline / ring   -> surface-tile-2    #2a2a2c
+   *   accent            -> primary-on-dark   #2997ff  (DESIGN: Action Blue
+   *                        disappears on a dark surface; Sky Link Blue is the
+   *                        documented dark-surface accent)
+   *   ink               -> on-dark           #ffffff
+   *   muted             -> body-muted        #cccccc, plus one alpha step
+   *                        derived from it for the quietest labels
+   * No second hue, no shadow, no gradient is introduced. */
+  --surface-void: #000000;
+  --surface-band: #272729;
+  --surface-hairline: #2a2a2c;
+  --surface-raised: #252527;
+  --text-strong: #ffffff;                   /* = on-dark, both themes */
+  --text-muted: #cccccc;                    /* = body-muted */
+  --muted-quiet: rgba(204, 204, 204, 0.68); /* #cccccc at reduced weight */
+
+  /* rounded */
+  --r-xs: 5px;
+  --r-sm: 8px;
+  --r-md: 11px;
+  --r-lg: 18px;
+  --r-pill: 9999px;
+  --r-full: 9999px;
+
+  /* spacing */
+  --s-xxs: 4px;
+  --s-xs: 8px;
+  --s-sm: 12px;
+  --s-md: 17px;
+  --s-lg: 24px;
+  --s-xl: 32px;
+  --s-xxl: 48px;
+  --s-section: 80px;
+
+  /* typography: font stacks (SF Pro with the documented Inter fallback) */
+  --font-display: "SF Pro Display", system-ui, -apple-system,
+    BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-text: "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont,
+    "Inter", "Segoe UI", Roboto, sans-serif;
+}
+
+/* ---------------------------------------------------------------- *
+ * Dark theme — token inversion only. No component rule below changes,
+ * which is the whole point: the palette is the single source of truth.
+ * Set by JS on <html data-theme="dark">.
+ * ---------------------------------------------------------------- */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: var(--surface-void);
+  --canvas-parchment: var(--surface-raised);
+  --surface-pearl: var(--surface-band);
+  --tile-1: var(--surface-band);
+  --tile-2: var(--surface-hairline);
+  --tile-3: var(--surface-void);
+
+  --ink: var(--text-strong);
+  --ink-muted-80: var(--text-muted);
+  --ink-muted-48: var(--muted-quiet);
+
+  --divider-soft: var(--surface-hairline);
+  --hairline: var(--surface-hairline);
+
+  --primary: var(--primary-on-dark);
+  --primary-focus: var(--primary-on-dark);
+
+  /* White on Sky Link Blue sits at ~3.1:1; ink on it reaches ~8:1. */
+  --on-primary: var(--surface-void);
+}
+
+/* The black nav keeps its silhouette on a black canvas through a hairline
+ * (DESIGN.md keeps the nav surface-black in every mode). */
+:root[data-theme="dark"] .global-nav {
+  border-bottom: 1px solid var(--hairline);
+}
+
+:root[data-theme="dark"] .sub-nav-frosted {
+  background: rgba(37, 37, 39, 0.8);
+  border-bottom: 1px solid var(--hairline);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark"] .sub-nav-frosted {
+    background: var(--surface-raised);
+  }
+}
+
+:root[data-theme="dark"] .diagnostics__body,
+:root[data-theme="dark"] .diagnostics__spec {
+  border-top-color: var(--surface-hairline);
+}
+
+/* ---------------------------------------------------------------- *
+ * Theme control — components: button-icon-circular (44px translucent
+ * chip over the black nav). The chip is drawn at 30px but keeps a 44px
+ * hit area, so the touch target requirement still holds.
+ * ---------------------------------------------------------------- */
+
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-full, 50%);
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle__chip {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface-chip-translucent);
+  /* The chip is the light translucent one in both themes, so its glyph stays
+   * ink — --ink would flip to white and vanish against it. */
+  color: var(--black);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.theme-toggle:hover .theme-toggle__chip {
+  background: var(--surface-chip-translucent);
+}
+
+.theme-toggle:active .theme-toggle__chip {
+  transform: scale(0.95); /* same micro-interaction as the other buttons */
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--primary-on-dark);
+  outline-offset: -2px;
+  border-radius: 50%;
+}
+
+.theme-toggle__icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Show the glyph of the theme you would switch TO: the moon while light,
+   the sun while dark. Written as explicit overrides because the two
+   selectors below are equally specific — a bare class would not win. */
+.theme-toggle__icon--sun {
+  display: none;
+}
+
+.theme-toggle__icon--moon {
+  display: block;
+}
+
+:root[data-theme="dark"] .theme-toggle__icon--sun {
+  display: block;
+}
+
+:root[data-theme="dark"] .theme-toggle__icon--moon {
+  display: none;
+}
+
+/* Honour a system preference only when the visitor has not chosen. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+
+    --canvas: var(--surface-void);
+    --canvas-parchment: var(--surface-raised);
+    --surface-pearl: var(--surface-band);
+    --tile-1: var(--surface-band);
+    --tile-2: var(--surface-hairline);
+    --tile-3: var(--surface-void);
+
+    --ink: var(--text-strong);
+    --ink-muted-80: var(--text-muted);
+    --ink-muted-48: var(--muted-quiet);
+
+    --divider-soft: var(--surface-hairline);
+    --hairline: var(--surface-hairline);
+
+    --primary: var(--primary-on-dark);
+    --primary-focus: var(--primary-on-dark);
+
+    --on-primary: var(--surface-void);
+  }
+
+  :root:not([data-theme]) .global-nav {
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  :root:not([data-theme]) .sub-nav-frosted {
+    background: rgba(37, 37, 39, 0.8);
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  :root:not([data-theme]) .theme-toggle__icon--sun {
+    display: block;
+  }
+
+  :root:not([data-theme]) .theme-toggle__icon--moon {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 17px;          /* typography.body — 17px, not 16px */
+  font-weight: 400;
+  line-height: 1.47;
+  letter-spacing: -0.374px;  /* the "Apple tight" tracking */
+}
+
+/* ESPHome ships an <esp-app> element for its own UI; ours replaces it. */
+esp-app {
+  display: none !important;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- *
+ * typography scale (DESIGN.md -> typography:)
+ * ---------------------------------------------------------------- */
+
+.t-display-lg {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.t-lead {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.14;
+  letter-spacing: 0.196px;
+}
+
+.t-tagline {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.19;
+  letter-spacing: 0.231px;
+}
+
+.t-body-strong {
+  font-family: var(--font-text);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.24;
+  letter-spacing: -0.374px;
+}
+
+.t-caption {
+  font-family: var(--font-text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.43;
+  letter-spacing: -0.224px;
+}
+
+.t-caption-strong {
+  font-family: var(--font-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.29;
+  letter-spacing: -0.224px;
+}
+
+.t-fine-print {
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: -0.12px;
+}
+
+.t-nav-link {
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: -0.12px;
+}
+
+.muted {
+  color: var(--ink-muted-48);
+}
+.muted-strong {
+  color: var(--ink-muted-80);
+}
+.muted-on-dark {
+  color: var(--body-muted);
+}
+
+/* ---------------------------------------------------------------- *
+ * components: global-nav + sub-nav-frosted
+ * ---------------------------------------------------------------- */
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.global-nav {
+  height: 44px;
+  background: var(--black);
+  color: var(--body-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-lg);
+  padding: 0 var(--s-lg);
+}
+
+.global-nav__brand {
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.0;
+  letter-spacing: -0.12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global-nav__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-md);
+  white-space: nowrap;
+}
+
+/* Connection state stays monochrome: no second accent is introduced. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-xs);
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: -0.12px;
+  color: var(--body-muted);
+}
+
+.status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--body-muted);
+  background: transparent;
+}
+
+.status--online .status__dot {
+  background: var(--body-on-dark);
+  border-color: var(--body-on-dark);
+}
+
+.sub-nav-frosted {
+  height: 52px;
+  background: rgba(245, 245, 247, 0.8);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-md);
+  padding: 0 var(--s-xl);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sub-nav-frosted {
+    background: var(--canvas-parchment);
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * components: button-* (pill actions, scale(0.95) press state)
+ * ---------------------------------------------------------------- */
+
+.btn {
+  font-family: var(--font-text);
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;                 /* 44px minimum touch target */
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--primary-focus);
+  outline-offset: 2px;
+}
+
+.btn:active {
+  transform: scale(0.95);           /* the system-wide micro-interaction */
+}
+
+/* button-primary: Action Blue, full pill, 11px 22px */
+.btn-primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.47;
+  letter-spacing: -0.374px;
+  border-radius: var(--r-pill);
+  padding: 11px 22px;
+}
+
+/* ---------------------------------------------------------------- *
+ * The measurement. This is the one deliberate departure from the
+ * DESIGN.md type ladder: the hero-display token is 56px with a fixed
+ * -0.28px tracking, which reads as small for a single number that is the
+ * whole point of the device. The size is fluid (clamp) and the tracking
+ * scales with it (-0.02em) because absolute px tracking stops tightening
+ * once the glyphs grow. Unit and trend glyph are sized in em so they track
+ * the number instead of floating next to it.
+ * ---------------------------------------------------------------- */
+
+.hero {
+  padding: var(--s-section) var(--s-lg) calc(var(--s-section) * 0.75);
+  text-align: center;
+}
+
+.hero-reading {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-xxs);
+  margin: var(--s-xs) 0 var(--s-sm);
+  font-family: var(--font-display);
+  font-size: clamp(56px, 17vw, 132px);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.hero-reading__unit {
+  font-size: 0.36em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink-muted-80);
+}
+
+.hero-reading__arrow {
+  font-size: 0.3em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink-muted-48);
+}
+
+.hero__trend {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.14;
+  letter-spacing: 0.196px;
+  color: var(--ink-muted-80);
+}
+
+.hero__stamp {
+  margin-top: var(--s-xs);
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: -0.08px;
+  color: var(--ink-muted-48);
+}
+
+/* ---------------------------------------------------------------- *
+ * components: product-tile-dark — the diagnostics band
+ * ---------------------------------------------------------------- */
+
+.tile-dark {
+  background: var(--tile-1);
+  color: var(--body-on-dark);
+  padding: var(--s-lg) var(--s-lg) var(--s-xl);
+}
+
+.diagnostics {
+  margin: 0 auto;
+  max-width: 560px;
+}
+
+.diagnostics__summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-xs);
+  min-height: 44px;                  /* touch target */
+  padding: 0 var(--s-xs);
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.29;
+  letter-spacing: -0.224px;
+  color: var(--body-muted);
+}
+
+.diagnostics__summary::-webkit-details-marker {
+  display: none;
+}
+
+.diagnostics__summary:focus-visible {
+  outline: 2px solid var(--primary-on-dark);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* chevron: rotates from pointing down (closed) to sideways (open) */
+.diagnostics__chevron {
+  display: inline-block;
+  font-size: 16px;
+  line-height: 1;
+  transform: rotate(90deg);
+  transition: transform 0.18s ease;
+}
+
+.diagnostics[open] .diagnostics__chevron {
+  transform: rotate(-90deg);
+}
+
+.diagnostics__body {
+  margin-top: var(--s-md);
+  padding-top: var(--s-md);
+  border-top: 1px solid var(--tile-2);
+}
+
+.diagnostics__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-md) var(--s-lg);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+
+.stat__label {
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: -0.08px;
+  color: var(--body-muted);
+}
+
+.stat__value {
+  font-family: var(--font-text);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.24;
+  letter-spacing: -0.374px;
+  color: var(--body-on-dark);
+}
+
+.diagnostics__spec {
+  margin: var(--s-md) 0 0;
+  padding: var(--s-md) 0 0;
+  border-top: 1px solid var(--tile-2);
+  list-style: none;
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: -0.08px;
+  color: var(--body-muted);
+  text-align: left;
+}
+
+.diagnostics__spec b {
+  font-weight: 600;
+  color: var(--body-on-dark);
+}
+
+/* ---------------------------------------------------------------- *
+ * components: footer — legal row only, fine-print
+ * ---------------------------------------------------------------- */
+
+.footer {
+  background: var(--canvas-parchment);
+  color: var(--ink-muted-48);
+  padding: var(--s-lg);
+  text-align: center;
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: -0.12px;
+}
+
+/* ---------------------------------------------------------------- *
+ * fault reporting — kept neutral so no second accent colour appears
+ * ---------------------------------------------------------------- */
+
+.fault {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  /* --tile-1 rather than --ink: in the dark theme --ink is white and the
+   * panel would become white-on-white. */
+  background: var(--tile-1);
+  color: var(--body-on-dark);
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: -0.12px;
+  padding: var(--s-sm) var(--s-lg);
+  white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------------- *
+ * Responsive behaviour — breakpoints from DESIGN.md:
+ * 1440 content lock, 1068, 833, 734, 640, 419
+ * ---------------------------------------------------------------- */
+
+@media (max-width: 833px) {
+  .diagnostics__spec {
+    line-height: 1.6;
+  }
+}
+
+@media (max-width: 735px) {
+  .hero {
+    padding: var(--s-xxl) var(--s-lg) var(--s-xl);
+  }
+}
+
+@media (max-width: 640px) {
+  .sub-nav-frosted {
+    padding: 0 var(--s-lg);
+  }
+
+  .diagnostics__grid {
+    grid-template-columns: 1fr;
+    gap: var(--s-sm);
+  }
+}
+
+@media (max-width: 419px) {
+  .hero-reading {
+    font-size: clamp(52px, 19vw, 96px);
+  }
+
+  .hero__trend {
+    font-size: 24px;
+  }
+
+  .global-nav {
+    padding: 0 var(--s-md);
+  }
+
+  .footer {
+    padding: var(--s-md);
+  }
+}

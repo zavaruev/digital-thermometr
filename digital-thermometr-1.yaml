@@ -1,0 +1,157 @@
+esphome:
+  name: digital-thermometr-1
+  friendly_name: digital_thermometr_1
+
+substitutions:
+  # Pin definitions
+  one_wire_pin: GPIO02
+  i2c_sda_pin: GPIO4
+  i2c_scl_pin: GPIO5
+
+esp8266:
+  board: nodemcuv2
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  id: wifi_component
+
+captive_portal:
+
+# Lightweight web server
+# v3 + js_include/css_include replaces the stock ESPHome frontend with the
+# interface specified in DESIGN.md. Both files are served from PROGMEM by the
+# firmware (gzip), so no CDN or internet access is involved at runtime.
+web_server:
+  port: 80
+  version: 3
+  js_include: thermometr_ui.js
+  css_include: thermometr_ui.css
+  js_url: "" # no stock ESPHome JS on top of ours
+  css_url: ""
+  log: false # don't stream firmware logs into the page
+
+# Global variables for temperature trend tracking
+globals:
+  - id: last_temp
+    type: float
+    restore_value: no
+    initial_value: "0.0"
+  - id: temp_trend
+    type: int
+    restore_value: no
+    initial_value: "0" # -1=down, 0=stable, 1=up
+  - id: heartbeat
+    type: bool
+    restore_value: no
+    initial_value: "false"
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: "id(heartbeat) = !id(heartbeat);"
+
+one_wire:
+  - platform: gpio
+    pin: ${one_wire_pin}
+
+sensor:
+  - platform: dallas_temp
+    id: ds18b20
+    address: 0xb9f5cd691f64ff28
+    name: temperature
+    update_interval: 5s
+    on_value:
+      then:
+        - lambda: |-
+            float diff = x - id(last_temp);
+            if (diff > 0.1) {
+              id(temp_trend) = 1;  // going up
+            } else if (diff < -0.1) {
+              id(temp_trend) = -1;  // going down
+            } else {
+              id(temp_trend) = 0;  // stable
+            }
+            id(last_temp) = x;
+
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    id: wifi_rssi
+    update_interval: 30s
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: "Europe/Moscow"
+
+  - platform: homeassistant
+    id: esptime
+    timezone: "Europe/Moscow"
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 10
+
+  - file: "gfonts://Bebas Neue"
+    id: font_large
+    size: 42
+
+  - file: "gfonts://Open Sans"
+    id: font_medium
+    size: 14
+
+i2c:
+  sda: ${i2c_sda_pin}
+  scl: ${i2c_scl_pin}
+  scan: false
+  frequency: 800kHz
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    lambda: |-
+      // Top row: Time (left) + Heartbeat + WiFi signal (right)
+      it.strftime(0, 0, id(font_medium), TextAlign::TOP_LEFT, "%H:%M", id(sntp_time).now());
+
+      // Heartbeat indicator (blinking dot)
+      if (id(heartbeat)) {
+        it.print(50, 4, id(font_small), "*");
+      }
+
+      if (id(wifi_rssi).has_state()) {
+        it.printf(128, 0, id(font_small), TextAlign::TOP_RIGHT, "%.0fdB", id(wifi_rssi).state);
+      }
+
+      // Center: Temperature with trend arrow
+      if (id(ds18b20).has_state()) {
+        // Temperature value
+        it.printf(54, 38, id(font_large), TextAlign::CENTER, "%.1f", id(ds18b20).state);
+        
+        // Degree symbol and trend arrow
+        const char* trend_arrow = "";
+        if (id(temp_trend) == 1) {
+          trend_arrow = "^";  // up
+        } else if (id(temp_trend) == -1) {
+          trend_arrow = "v";  // down
+        } else {
+          trend_arrow = "=";  // stable
+        }
+        it.printf(100, 22, id(font_medium), TextAlign::TOP_LEFT, "o%s", trend_arrow);
+      }
+
+      // Bottom: IP Address
+      it.printf(64, 64, id(font_small), TextAlign::BASELINE_CENTER, "%s", WiFi.localIP().toString().c_str());
