@@ -28,7 +28,6 @@
     connected: "Connected",
     offline: "Offline",
     temperature: "Temperature",
-    refresh: "Refresh",
     theme: { dark: "Dark appearance", light: "Light appearance" },
     updated: "Updated",
     diagnostics: "Diagnostics",
@@ -39,7 +38,6 @@
     interval: "Sample interval",
     signal: "WiFi signal",
     uptime: "Uptime",
-    host: "Host",
     resetReason: "Reset reason",
     quality: { excellent: "Excellent", good: "Good", fair: "Fair", weak: "Weak" },
     spec: {
@@ -48,10 +46,7 @@
       rom: "ROM code",
       bus: "Bus",
       display: "Display",
-    },
-    legal:
-      "Firmware digital-thermometr-1 · served by the ESPHome web_server " +
-      "component · interface follows DESIGN.md (Apple-design-analysis)"
+    }
   };
 
   var TREND_ARROW = { up: "↑", down: "↓", steady: "→" };
@@ -226,7 +221,7 @@
       '  </nav>',
       '  <nav class="sub-nav-frosted">',
       '    <span class="t-tagline">' + L.temperature + '</span>',
-      '    <button class="btn btn-primary" id="btn-refresh" type="button">' + L.refresh + '</button>',
+      '    <span class="sub-nav-frosted__host">' + host + '</span>',
       '  </nav>',
       '</header>',
 
@@ -265,24 +260,14 @@
       '          <li>' + L.spec.bus + ': <b>I&sup2;C</b> SDA GPIO4 / SCL GPIO5</li>',
       '          <li>' + L.spec.display + ': <b>SSD1306 128&times;64</b> · 0x3C</li>',
       '          <li>' + L.resetReason + ': <b id="diag-reset">&mdash;</b></li>',
-      '          <li>' + L.host + ': <b>' + host + '</b></li>',
       '        </ul>',
       '      </div>',
       '    </details>',
       '  </section>',
-      '</main>',
-
-      '<footer class="footer">' + L.legal + '</footer>'
+      '</main>'
     ].join("\n");
 
     document.body.appendChild(root);
-
-    var refresh = document.getElementById("btn-refresh");
-    if (refresh) {
-      refresh.addEventListener("click", function () {
-        location.reload();
-      });
-    }
 
     var toggle = document.getElementById("theme-toggle");
     if (toggle) {

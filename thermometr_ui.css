@@ -53,7 +53,7 @@
   /* dark theme: not in DESIGN.md (it lists dark surfaces as a known gap), so
    * it is built by inverting the same tokens rather than introducing new hues:
    *   canvas            -> surface-black     #000000
-   *   parchment / footer-> surface-tile-3    #252527
+   *   parchment          -> surface-tile-3    #252527
    *   dark band         -> surface-tile-1    #272729
    *   hairline / ring   -> surface-tile-2    #2a2a2c
    *   accent            -> primary-on-dark   #2997ff  (DESIGN: Action Blue
@@ -310,21 +310,9 @@ p {
  * typography scale (DESIGN.md -> typography:)
  * ---------------------------------------------------------------- */
 
-.t-display-lg {
-  font-family: var(--font-display);
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: 0;
-}
-
-.t-lead {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 400;
-  line-height: 1.14;
-  letter-spacing: 0.196px;
-}
+/* The full type ladder lives in DESIGN.md; only the steps this interface
+ * actually sets are reproduced here, each attached to a real element rather
+ * than offered as a utility class. */
 
 .t-tagline {
   font-family: var(--font-display);
@@ -334,52 +322,6 @@ p {
   letter-spacing: 0.231px;
 }
 
-.t-body-strong {
-  font-family: var(--font-text);
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.24;
-  letter-spacing: -0.374px;
-}
-
-.t-caption {
-  font-family: var(--font-text);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.43;
-  letter-spacing: -0.224px;
-}
-
-.t-caption-strong {
-  font-family: var(--font-text);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.29;
-  letter-spacing: -0.224px;
-}
-
-.t-fine-print {
-  font-family: var(--font-text);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.0;
-  letter-spacing: -0.12px;
-}
-
-.t-nav-link {
-  font-family: var(--font-text);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.0;
-  letter-spacing: -0.12px;
-}
-
-.muted {
-  color: var(--ink-muted-48);
-}
-.muted-strong {
-  color: var(--ink-muted-80);
-}
 .muted-on-dark {
   color: var(--body-muted);
 }
@@ -510,43 +452,33 @@ p {
   }
 }
 
-/* ---------------------------------------------------------------- *
- * components: button-* (pill actions, scale(0.95) press state)
- * ---------------------------------------------------------------- */
-
-.btn {
+/* Right-hand slot of the sub-nav. DESIGN.md puts a primary CTA here, but this
+ * interface has no action worth a blue pill: the reading arrives over SSE, so a
+ * manual refresh button was decoration pretending to be a control. The hostname
+ * takes the slot quietly instead — identity, not activity. Activity is already
+ * signalled by the pulsing status dot. */
+.sub-nav-frosted__host {
   font-family: var(--font-text);
-  cursor: pointer;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;                 /* 44px minimum touch target */
-  transition: transform 0.15s ease, background-color 0.15s ease;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--primary-focus);
-  outline-offset: 2px;
-}
-
-.btn:active {
-  transform: scale(0.95);           /* the system-wide micro-interaction */
-}
-
-/* button-primary: Action Blue, full pill, 11px 22px */
-.btn-primary {
-  background: var(--primary);
-  color: var(--on-primary);
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 400;
-  line-height: 1.47;
-  letter-spacing: -0.374px;
-  border-radius: var(--r-pill);
-  padding: 11px 22px;
+  line-height: 1.29;
+  letter-spacing: -0.224px;
+  color: var(--ink-muted-48);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 50%;
 }
+
+/* ---------------------------------------------------------------- *
+ * components: button-*
+ *
+ * No primary pill lives here any more. DESIGN.md puts one in the sub-nav,
+ * but the interface has no action worth a blue button: the reading arrives
+ * over SSE and the theme toggle is the only control. The `scale(0.95)`
+ * press state and the 2px focus ring move to `.theme-toggle` when a real
+ * action appears — do not reintroduce them ad hoc.
+ * ---------------------------------------------------------------- */
 
 /* ---------------------------------------------------------------- *
  * The measurement. This is the one deliberate departure from the
@@ -723,22 +655,6 @@ p {
 }
 
 /* ---------------------------------------------------------------- *
- * components: footer — legal row only, fine-print
- * ---------------------------------------------------------------- */
-
-.footer {
-  background: var(--canvas-parchment);
-  color: var(--ink-muted-48);
-  padding: var(--s-lg);
-  text-align: center;
-  font-family: var(--font-text);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.4;
-  letter-spacing: -0.12px;
-}
-
-/* ---------------------------------------------------------------- *
  * fault reporting — kept neutral so no second accent colour appears
  * ---------------------------------------------------------------- */
 
@@ -800,9 +716,5 @@ p {
 
   .global-nav {
     padding: 0 var(--s-md);
-  }
-
-  .footer {
-    padding: var(--s-md);
   }
 }
