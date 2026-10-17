@@ -348,6 +348,24 @@ p {
 }
 
 .global-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-xs);
+  min-width: 0;
+  color: var(--body-on-dark);
+}
+
+/* The device mark, same SVG as the favicon. Sized to the 44px nav and kept
+ * flex:none so only the name ever ellipsises on a narrow screen. */
+.global-nav__mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: block;
+  border-radius: 50%;
+}
+
+.global-nav__name {
   font-family: var(--font-text);
   font-size: 12px;
   font-weight: 600;

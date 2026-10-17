@@ -52,6 +52,19 @@
   var TREND_ARROW = { up: "↑", down: "↓", steady: "→" };
   var TREND_LABEL = { up: L.rising, down: L.falling, steady: L.steady };
 
+  /* The device mark: a thermometer in the brand colours - surface-black
+   * container (global-nav's own background), white body, Action Blue mercury.
+   * One accent, no gradients, legible down to 16 px, which is what makes it
+   * work as a favicon as well as an in-page mark. Defined once and used for
+   * both so they can never drift apart. */
+  var MARK =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" ' +
+    'aria-label="Thermometer">' +
+    '<circle cx="32" cy="32" r="32" fill="#000000"/>' +
+    '<path d="M32 8a10 10 0 0 1 10 10v20.6a14 14 0 1 1-20 0V18A10 10 0 0 1 32 8z" fill="#ffffff"/>' +
+    '<path d="M28.5 30h7v9.2a6.6 6.6 0 1 1-7 0z" fill="#0066cc"/>' +
+    "</svg>";
+
   /* Mirrors the firmware lambda in digital-thermometr-1.yaml: a reading is
    * "rising" / "falling" when it moves more than 0.1 °C between samples. */
   var TREND_THRESHOLD = 0.1;
@@ -188,17 +201,17 @@
       document.head.appendChild(meta);
     }
 
-    var favicon =
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
-      '<circle cx="32" cy="32" r="32" fill="#000"/>' +
-      '<circle cx="32" cy="32" r="9" fill="#fff"/>' +
-      '<rect x="30" y="10" width="4" height="22" rx="2" fill="#fff"/>' +
-      "</svg>";
-    var link = document.createElement("link");
-    link.rel = "icon";
+    /* ESPHome's own index.html already ships an empty <link rel=icon href=data:>.
+     * Adding a second one leaves it to the browser which one wins, so reuse the
+     * existing element instead of adding a competing declaration. */
+    var link = document.querySelector('link[rel~="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
     link.type = "image/svg+xml";
-    link.href = "data:image/svg+xml;utf8," + encodeURIComponent(favicon);
-    document.head.appendChild(link);
+    link.href = "data:image/svg+xml;utf8," + encodeURIComponent(MARK);
 
     applyTheme();
 
@@ -207,7 +220,10 @@
     root.innerHTML = [
       '<header class="app-nav">',
       '  <nav class="global-nav">',
-      '    <span class="global-nav__brand">' + L.brand + '</span>',
+      '    <span class="global-nav__brand">' +
+      '      ' + MARK.replace("<svg ", '<svg class="global-nav__mark" ') +
+      '      <span class="global-nav__name">' + L.brand + '</span>' +
+      '    </span>',
       '    <span class="global-nav__meta">',
       '      <span class="t-nav-link muted-on-dark" id="nav-rssi"></span>',
       '      <span class="status" id="status"><span class="status__dot"></span><span id="status-label">…</span></span>',
