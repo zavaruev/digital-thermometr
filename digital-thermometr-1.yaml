@@ -25,15 +25,34 @@ logger:
 api:
   encryption:
     key: !secret api_key
+  # ESPHome defaults to 4 for the ESP8266 (~40 KB free RAM, each connection
+  # costs 500-1000 bytes). Four is not enough here: the device builder, the
+  # editor integration, Home Assistant and an occasional `esphome logs` each
+  # hold a long-lived connection, and once the slots are full the server
+  # rejects new ones - which surfaces as "connection dropped immediately
+  # after encrypted hello" and looks like a key or radio problem.
+  max_connections: 8
 
 ota:
   - platform: esphome
-    password: !secret ota_password
+    # Reuses the api encryption key: one key per device, and the firmware image
+    # travels encrypted rather than merely authenticated. A separate
+    # ota_password would cost ~3.5 KB of flash for a weaker guarantee.
+    encryption:
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   id: wifi_component
+  # Do not reboot when WiFi cannot be associated: the default 15 min turns a
+  # long outage into a reboot loop. The device keeps retrying in the background
+  # instead, and the fallback AP below remains reachable as a last resort.
+  reboot_timeout: 0s
+  # Fallback access point. Without this block captive_portal was configured but
+  # could never actually be joined, which was the warning it emitted.
+  ap:
+    ssid: "Digital Thermometer Fallback"
+    password: !secret ap_password
 
 captive_portal:
 

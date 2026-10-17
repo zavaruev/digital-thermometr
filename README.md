@@ -77,15 +77,16 @@ token inversion rather than a second set of rules.
 cp secrets.example.yaml secrets.yaml
 ```
 
-Fill in `wifi_ssid`, `wifi_password` and `api_key`. `secrets.yaml` is
-git-ignored. Generate an API key with:
+Fill in `wifi_ssid`, `wifi_password`, `api_key` and `ap_password`.
+`secrets.yaml` is git-ignored. Generate an API key with:
 
 ```bash
 esphome config --show-secrets dummy.yaml
 ```
 
 The build fails without `api_key` — the firmware references it as
-`!secret api_key`.
+`!secret api_key`. `ap_password` backs the fallback access point that the
+captive portal needs in order to be reachable at all.
 
 ### 2. Point the deploy script at your host
 
@@ -119,6 +120,28 @@ worth watching on the ESP8266:
 RAM:   53.2% (used 43612 bytes from 81920 bytes)
 Flash: 48.0% (used 500873 bytes from 1044464 bytes)
 ```
+
+**Recovery paths.** The device is reachable three ways, in order of preference:
+the native API for Home Assistant, OTA over the encrypted channel, and — if
+the encryption key is ever lost — plain HTTP upload at
+`http://<device-ip>/update`. That last one is why `web_server`'s OTA platform
+is deliberately left enabled even though ESPHome warns that it does not
+benefit from OTA encryption. If the device cannot join your network at all, the
+fallback access point (`wifi: ap:`) comes up and the captive portal can serve
+the WiFi credentials.
+
+## Troubleshooting
+
+**"connection dropped immediately after encrypted hello" on the native API.**
+This reads like a key mismatch and is not. Check the device's own log first —
+with `web_server: log: true` the stream at `/events` shows
+`[W][api:271]: Max connections (N), rejecting <ip>`. The API server has a
+fixed number of slots (4 by default on the ESP8266, each costing 500–1000
+bytes) and every long-lived client holds one: the dashboard, the editor
+integration, Home Assistant, `esphome logs`. This repo raises the limit to 8
+with `api: max_connections`. If it still happens, a client is reconnecting in a
+loop — restart the dashboard or editor integration rather than touching the
+key.
 
 ## How the web interface stays in sync with the firmware
 
@@ -177,12 +200,11 @@ runs `esphome compile` as an explicit step.
   connection the device itself reports as `Fair` (−66 dBm), and it is the
   strongest evidence so far that the problem is in the radio or the supply
   rather than in the firmware.
-- **Two ESPHome warnings are still present** in the config and deliberately
-  not addressed here: the `ota` block uses a password even though the native
-  API already provides encryption (ESPHome suggests `encryption:` instead,
-  and the plaintext fallback is removed in ESPHome 2027.3), and
-  `captive_portal` is enabled without a `wifi: ap:` block, which makes the
-  portal unreachable.
+- **One ESPHome warning remains**, and it is a deliberate trade:
+  `OTA encryption does not cover the web_server OTA platform; its plaintext
+  /update endpoint accepts the same image`. Keeping that endpoint enabled is
+  what guarantees a remote recovery path if the encryption key is ever lost.
+  Set `web_server: ota: false` to silence it, at the cost of that path.
 
 **Checking firmware freshness.** The `compiled on <date>` line in the device
 log is not a reliable check: ESPHome derives it from a hash of the YAML alone,
