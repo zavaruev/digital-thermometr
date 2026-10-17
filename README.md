@@ -8,7 +8,17 @@ external dependency at runtime.
 The device answers on port 80 and pushes state over Server-Sent Events, so
 the reading updates in place without polling.
 
-![web interface](docs/ui-dark.png)
+![web interface, dark](docs/ui-dark.png)
+
+## Status
+
+Current release: **v1.0.0** — see [releases](https://github.com/zavaruev/digital-thermometr/releases).
+
+The software side is complete and deployed. Two hardware problems are open and
+documented under [Known issues](#known-issues): the DS18B20 reading drifts away
+from room temperature the longer the device runs, and the board reboots on its
+own every few hours. Both point at the power supply rather than at the
+firmware, and neither can be diagnosed from software alone.
 
 ## Hardware
 
@@ -43,13 +53,17 @@ a large temperature with a trend glyph, a heartbeat dot and the device IP.
 - live connection state with a liveness dot that pulses on every incoming
   sensor reading, so a device that stops publishing stops blinking;
 - signal strength;
-- everything diagnostic — RSSI, uptime, board, ROM code, pinout, host, and the
+- everything diagnostic — RSSI, uptime, board, ROM code, pinout, and the
   reset reason of the current boot — sits in a **Diagnostics** disclosure
   that is closed on first load;
 - light and dark appearance, defaulting to the system preference with a
   manual override that persists;
+- the theme toggle is the only control. There is no refresh button: the
+  reading arrives over SSE, so reloading the page by hand would buy nothing;
 - no CDN, no web fonts, no analytics. The page is three small files served
   from the device's own flash.
+
+![web interface, light](docs/ui-light.png)
 
 ## Repository layout
 
@@ -117,8 +131,8 @@ test suite. A successful build reports the flash and RAM budget, which is
 worth watching on the ESP8266:
 
 ```
-RAM:   53.2% (used 43612 bytes from 81920 bytes)
-Flash: 48.0% (used 500873 bytes from 1044464 bytes)
+RAM:   53.7% (used 43976 bytes from 81920 bytes)
+Flash: 48.7% (used 508269 bytes from 1044464 bytes)
 ```
 
 **Recovery paths.** The device is reachable three ways, in order of preference:
@@ -182,17 +196,19 @@ runs `esphome compile` as an explicit step.
   plausible companion cause for the spontaneous reboots below. Settle this at
   the hardware level: measure supply voltage under load, then re-check.
 - **The device reboots on its own every few hours**, with no OTA in flight and
-  nothing in the logs before it. The config carries the default
-  `wifi: reboot_timeout: 15min`, so a WiFi association that fails for 15
-  minutes triggers a reboot, and the signal sits around −67 dBm. The `debug`
-  component is enabled in the firmware specifically to report the reset reason
-  at boot — that information exists only during the boot that caused it and
-  cannot be recovered afterwards. The `Reset Reason` text sensor publishes the
-  same value continuously from `ESP.getResetReason()`, which is what the web
-  interface shows under Diagnostics; it reads RTC memory, so it stays valid for
-  the whole boot. After an OTA upload it reads `Software/System restart` by
-  definition — only an unexplained reboot tells you something. Home Assistant
-  can raise a notification on the reasons you do not expect.
+  nothing in the logs before it. The cause is still open. What is known: the
+  WiFi reboot timeout (15 min by default) is now disabled with
+  `wifi: reboot_timeout: 0s`, so a failed association can no longer be the
+  trigger — whatever restarts it is something else, and a brown-out on the
+  supply remains the leading candidate given the symptoms above. The `debug`
+  component reports the reset reason at boot, because that information exists
+  only during the boot that caused it and cannot be recovered afterwards. The
+  `Reset Reason` text sensor publishes the same value continuously from
+  `ESP.getResetReason()`; it reads RTC memory, so it stays valid for the whole
+  boot, and the web interface shows it under Diagnostics. After an OTA upload it
+  reads `Software/System restart` by definition — only an unexplained reboot
+  tells you anything. Home Assistant can raise a notification on unexpected
+  reasons.
 - **The OTA link is degrading.** A normal upload of this firmware takes about
   7 seconds; one attempt on 2026-10-17 failed outright with
   `ERROR receiving chunk result: Unknown error from ESP`, and the retry took
