@@ -12,7 +12,7 @@ the reading updates in place without polling.
 
 ## Status
 
-Current release: **v1.0.0** — see [releases](https://github.com/zavaruev/digital-thermometr/releases).
+Current release: **v1.0.1** — see [releases](https://github.com/zavaruev/digital-thermometr/releases).
 
 The software side is complete and deployed. One hardware problem is still open
 and documented under [Known issues](#known-issues): the DS18B20 reading drifts
