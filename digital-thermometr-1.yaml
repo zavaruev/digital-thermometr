@@ -133,6 +133,18 @@ text_sensor:
     lambda: |-
       return std::string(ESP.getResetReason().c_str());
 
+# Reboot control for the web interface, where it lives inside the collapsed
+# Diagnostics block - present when something looks wrong, invisible otherwise.
+# The REST path the UI posts to is /button/Restart/press: since ESPHome 2026.9
+# the web server matches the URL segment against the entity *name* verbatim,
+# not against a sanitised object id, so the capital R is required.
+button:
+  - platform: restart
+    id: restart_device
+    name: "Restart"
+    icon: "mdi:restart"
+    entity_category: diagnostic
+
 time:
   - platform: sntp
     id: sntp_time

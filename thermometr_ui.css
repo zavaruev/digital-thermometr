@@ -672,6 +672,62 @@ p {
   color: var(--body-on-dark);
 }
 
+/* The restart control. Inside the dark band it uses the dark-surface accent
+ * (primary-on-dark): Action Blue is unreadable on near-black, which is exactly
+ * what DESIGN.md's Sky Link Blue is for. A ghost pill rather than a filled
+ * primary button — this is a last resort, not a primary action. */
+.diagnostics__actions {
+  margin-top: var(--s-md);
+  padding-top: var(--s-md);
+  border-top: 1px solid var(--tile-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-xs);
+}
+
+.btn-on-dark {
+  min-height: 44px;
+  padding: 11px 22px;
+  font-family: var(--font-text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.29;
+  letter-spacing: -0.224px;
+  color: var(--primary-on-dark);
+  background: transparent;
+  border: 1px solid var(--primary-on-dark);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-on-dark:active {
+  transform: scale(0.95); /* the system-wide micro-interaction */
+}
+
+.btn-on-dark:focus-visible {
+  outline: 2px solid var(--primary-on-dark);
+  outline-offset: 2px;
+}
+
+.btn-on-dark:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+.diagnostics__hint {
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: -0.08px;
+  color: var(--body-muted);
+  text-align: center;
+  max-width: 32ch;
+}
+
 /* ---------------------------------------------------------------- *
  * fault reporting — kept neutral so no second accent colour appears
  * ---------------------------------------------------------------- */

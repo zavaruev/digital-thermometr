@@ -36,6 +36,9 @@
     steady: "Steady",
     waiting: "Waiting for the first reading",
     interval: "Sample interval",
+    restart: "Restart",
+    restarting: "Restarting…",
+    restartHint: "Reboots the device; the page drops until it comes back.",
     signal: "WiFi signal",
     uptime: "Uptime",
     resetReason: "Reset reason",
@@ -277,6 +280,10 @@
       '          <li>' + L.spec.display + ': <b>SSD1306 128&times;64</b> · 0x3C</li>',
       '          <li>' + L.resetReason + ': <b id="diag-reset">&mdash;</b></li>',
       '        </ul>',
+      '        <div class="diagnostics__actions">',
+      '          <button class="btn-on-dark" id="btn-restart" type="button">' + L.restart + '</button>',
+      '          <span class="diagnostics__hint" id="restart-hint">' + L.restartHint + '</span>',
+      '        </div>',
       '      </div>',
       '    </details>',
       '  </section>',
@@ -284,6 +291,28 @@
     ].join("\n");
 
     document.body.appendChild(root);
+
+    var restart = document.getElementById("btn-restart");
+    if (restart) {
+      restart.addEventListener("click", function () {
+        if (restart.disabled) return;
+        /* The device reboots on success, so the page simply goes away. Disable
+         * the control and say what is happening. A 404 resolves the fetch
+         * promise just like a 200, so the status has to be checked explicitly
+         * or a wrong path looks exactly like a working button. */
+        restart.disabled = true;
+        restart.textContent = L.restarting;
+        fetch("/button/Restart/press", { method: "POST" })
+          .then(function (res) {
+            if (!res.ok) throw new Error(res.status + " " + res.statusText);
+          })
+          .catch(function (err) {
+            restart.disabled = false;
+            restart.textContent = L.restart;
+            showFault("Restart failed: " + err);
+          });
+      });
+    }
 
     var toggle = document.getElementById("theme-toggle");
     if (toggle) {
