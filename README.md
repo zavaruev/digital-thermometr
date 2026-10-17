@@ -12,7 +12,7 @@ the reading updates in place without polling.
 
 ## Status
 
-Current release: **v1.0.1** — see [releases](https://github.com/zavaruev/digital-thermometr/releases).
+Current release: **v1.0.2** — see [releases](https://github.com/zavaruev/digital-thermometr/releases).
 
 The software side is complete and deployed. One hardware problem is still open
 and documented under [Known issues](#known-issues): the DS18B20 reading drifts
@@ -57,11 +57,16 @@ a large temperature with a trend glyph, a heartbeat dot and the device IP.
 - signal strength;
 - everything diagnostic — RSSI, uptime, board, ROM code, pinout, and the
   reset reason of the current boot — sits in a **Diagnostics** disclosure
-  that is closed on first load;
+  that is closed on first load, together with a last-resort **Restart**
+  button that reboots the device;
 - light and dark appearance, defaulting to the system preference with a
   manual override that persists;
-- the theme toggle is the only control. There is no refresh button: the
-  reading arrives over SSE, so reloading the page by hand would buy nothing;
+- a device mark — a thermometer in the brand colours — used both as the
+  favicon and in the top bar, so the browser tab and the interface carry the
+  same identity;
+- exactly two controls: that Restart button and the theme toggle. There is no
+  refresh button: the reading arrives over SSE, so reloading the page by hand
+  would buy nothing;
 - no CDN, no web fonts, no analytics. The page is three small files served
   from the device's own flash.
 
@@ -133,8 +138,8 @@ test suite. A successful build reports the flash and RAM budget, which is
 worth watching on the ESP8266:
 
 ```
-RAM:   53.6% (used 43924 bytes from 81920 bytes)
-Flash: 48.7% (used 508185 bytes from 1044464 bytes)
+RAM:   53.7% (used 44004 bytes from 81920 bytes)
+Flash: 48.9% (used 511045 bytes from 1044464 bytes)
 ```
 
 The NTP servers are configured **by IP address**, not by name. Resolving a name
@@ -174,6 +179,14 @@ the identifiers published by the web server — `sensor/temperature` replaced
 (`sensor/WiFi Signal`). The UI runs `entityKey()` over every incoming id so
 it works against both the current and the previous scheme, and against
 sub-device prefixes.
+
+**Action URLs use the entity name verbatim.** The same release changed how the
+web server matches a URL segment: `match_entity()` compares against
+`entity->get_name()`, not a sanitised object id. The Restart control therefore
+posts to `/button/Restart/press` — capital R — and a lower-case path returns
+404. Worse for a UI, a 404 resolves a `fetch` promise exactly like a 200, so
+the failure handler never runs and the control looks alive while doing
+nothing; the interface checks `res.ok` explicitly for that reason.
 
 **The firmware must actually be recompiled.** `esphome upload` invokes
 PlatformIO with `-t upload -t nobuild` and ships whatever `firmware.bin` is
