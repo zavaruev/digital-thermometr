@@ -14,11 +14,13 @@ the reading updates in place without polling.
 
 Current release: **v1.0.0** — see [releases](https://github.com/zavaruev/digital-thermometr/releases).
 
-The software side is complete and deployed. Two hardware problems are open and
-documented under [Known issues](#known-issues): the DS18B20 reading drifts away
-from room temperature the longer the device runs, and the board reboots on its
-own every few hours. Both point at the power supply rather than at the
-firmware, and neither can be diagnosed from software alone.
+The software side is complete and deployed. One hardware problem is still open
+and documented under [Known issues](#known-issues): the DS18B20 reading drifts
+away from room temperature the longer the device runs, which points at the
+supply or at the sensor's mounting. It cannot be diagnosed from software. The
+spontaneous reboots that used to happen every few hours were traced to a
+blocking DNS lookup on the time path and are fixed — see
+[Resolved](#resolved-the-sontaneous-reboots).
 
 ## Hardware
 
@@ -131,9 +133,14 @@ test suite. A successful build reports the flash and RAM budget, which is
 worth watching on the ESP8266:
 
 ```
-RAM:   53.7% (used 43976 bytes from 81920 bytes)
-Flash: 48.7% (used 508269 bytes from 1044464 bytes)
+RAM:   53.6% (used 43924 bytes from 81920 bytes)
+Flash: 48.7% (used 508185 bytes from 1044464 bytes)
 ```
+
+The NTP servers are configured **by IP address**, not by name. Resolving a name
+goes through lwIP's blocking DNS resolver, which stalled the main loop past the
+hardware watchdog and rebooted the device; by address that path does not exist.
+This matters if you edit `time:` — do not reintroduce hostnames there.
 
 **Recovery paths.** The device is reachable three ways, in order of preference:
 the native API for Home Assistant, OTA over the encrypted channel, and — if
@@ -177,7 +184,7 @@ runs `esphome compile` as an explicit step.
 ## Known issues
 
 - **The sensor reading drifts away from room temperature the longer the device
-  runs.** Freshly booted the DS18B20 reads a plausible 25.4–26.6 °C. Left
+  runs.** Freshly booted the DS18B20 reads a plausible 23–26 °C. Left
   running for hours it climbs to 59–92 °C and stays there. Measured on this
   hardware:
 
@@ -192,35 +199,56 @@ runs `esphome compile` as an explicit step.
   sagging under load — the ESP8266 draws hundreds of milliamps while
   transmitting and the sensor sits on the same rail — or heat soak from the
   regulator into a sensor mounted close to the board. A DS18B20 run below its
-  ~1.1 V floor also reports garbage-high values, and a brown-out would be a
-  plausible companion cause for the spontaneous reboots below. Settle this at
-  the hardware level: measure supply voltage under load, then re-check.
-- **The device reboots on its own every few hours**, with no OTA in flight and
-  nothing in the logs before it. The cause is still open. What is known: the
-  WiFi reboot timeout (15 min by default) is now disabled with
-  `wifi: reboot_timeout: 0s`, so a failed association can no longer be the
-  trigger — whatever restarts it is something else, and a brown-out on the
-  supply remains the leading candidate given the symptoms above. The `debug`
-  component reports the reset reason at boot, because that information exists
-  only during the boot that caused it and cannot be recovered afterwards. The
-  `Reset Reason` text sensor publishes the same value continuously from
-  `ESP.getResetReason()`; it reads RTC memory, so it stays valid for the whole
-  boot, and the web interface shows it under Diagnostics. After an OTA upload it
-  reads `Software/System restart` by definition — only an unexplained reboot
-  tells you anything. Home Assistant can raise a notification on unexpected
-  reasons.
-- **The OTA link is degrading.** A normal upload of this firmware takes about
-  7 seconds; one attempt on 2026-10-17 failed outright with
-  `ERROR receiving chunk result: Unknown error from ESP`, and the retry took
-  145.8 seconds to transfer the same 513 KB. That is a 20× swing on a
-  connection the device itself reports as `Fair` (−66 dBm), and it is the
-  strongest evidence so far that the problem is in the radio or the supply
-  rather than in the firmware.
-- **One ESPHome warning remains**, and it is a deliberate trade:
-  `OTA encryption does not cover the web_server OTA platform; its plaintext
-  /update endpoint accepts the same image`. Keeping that endpoint enabled is
-  what guarantees a remote recovery path if the encryption key is ever lost.
-  Set `web_server: ota: false` to silence it, at the cost of that path.
+  ~1.1 V floor also reports garbage-high values. This one needs hardware:
+  measure supply voltage under load, check the 1-Wire pull-up (4.7 kΩ to
+  3.3 V), confirm the sensor's VDD is connected, then move the sensor away
+  from the board.
+- **One reboot right after an OTA upload**, logged as `Exception`, observed
+  once in several deploys. It happens in the first seconds after the reboot
+  that an OTA triggers and the device then runs normally, so it may be an
+  artefact of writing new firmware rather than a runtime fault. Watch it: if it
+  ever appears without a deploy in flight, treat it as a second, separate
+  problem.
+
+## Resolved: the spontaneous reboots
+
+The device used to reboot by itself every few hours with
+`Reset Reason: Hardware Watchdog` — the ESP8266 stopped feeding its watchdog and
+was reset by the hardware after the main loop stalled. The cause was
+**the blocking DNS resolver on the time path**: `sntp` with
+`0.pool.ntp.org` resolves that name through lwIP's resolver, which retries
+inside the main loop and can run past the 4-second watchdog window.
+
+It was pinned down by fault injection rather than guesswork. Shortening the
+SNTP interval to 30 seconds made it reproducible in under two minutes — the
+device rebooted every ~15 seconds, with the uptime counter visibly going
+backwards:
+
+```
+t+ 40s uptime=7     ← rebooted (was 12)
+t+ 60s uptime=12    ← rebooted
+t+110s uptime=11    ← rebooted
+t+170s uptime=77    ← stabilised once a lookup finally succeeded
+```
+
+Addressing the NTP servers by IP removes name resolution from that path
+entirely:
+
+```yaml
+servers:
+  - 216.239.35.0   # time.google.com
+  - 162.159.200.1  # Cloudflare NTP
+```
+
+The same 30-second cadence that used to kill the device in 15 seconds now ran
+for 468 seconds without a reset, so it is the resolution and not the frequency
+that was at fault. Suspects eliminated along the way: 1-Wire traffic (10× the
+normal read rate made no difference) and a client that stops reading from the
+SSE stream (200 seconds of an idle socket changed nothing).
+
+`Reset Reason` under Diagnostics, and the `debug` component in the firmware,
+are what made this visible — the reset reason exists only during the boot that
+caused it and cannot be recovered afterwards.
 
 **Checking firmware freshness.** The `compiled on <date>` line in the device
 log is not a reliable check: ESPHome derives it from a hash of the YAML alone,

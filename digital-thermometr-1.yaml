@@ -137,6 +137,15 @@ time:
   - platform: sntp
     id: sntp_time
     timezone: "Europe/Moscow"
+    # Servers are addressed by IP on purpose. Resolving pool.ntp.org goes
+    # through lwIP's blocking DNS resolver, which can stall the main loop past
+    # the 4 s hardware watchdog and reboot the device with "Hardware Watchdog"
+    # - reproduced here with the interval temporarily shortened to 30 s, which
+    # made it reboot every ~15 s until a lookup finally succeeded. By address
+    # there is no name resolution on the time path at all.
+    servers:
+      - 216.239.35.0 # time.google.com, stratum 1
+      - 162.159.200.1 # Cloudflare NTP, stratum 3
 
   - platform: homeassistant
     id: esptime
