@@ -40,6 +40,7 @@
     signal: "WiFi signal",
     uptime: "Uptime",
     host: "Host",
+    resetReason: "Reset reason",
     quality: { excellent: "Excellent", good: "Good", fair: "Fair", weak: "Weak" },
     spec: {
       board: "Board",
@@ -67,6 +68,7 @@
     trend: null,
     rssi: null,
     uptime: null,
+    resetReason: null,
     title: null
   };
 
@@ -262,6 +264,7 @@
       '          <li>' + L.spec.rom + ': <b>0xb9f5cd691f64ff28</b></li>',
       '          <li>' + L.spec.bus + ': <b>I&sup2;C</b> SDA GPIO4 / SCL GPIO5</li>',
       '          <li>' + L.spec.display + ': <b>SSD1306 128&times;64</b> · 0x3C</li>',
+      '          <li>' + L.resetReason + ': <b id="diag-reset">&mdash;</b></li>',
       '          <li>' + L.host + ': <b>' + host + '</b></li>',
       '        </ul>',
       '      </div>',
@@ -453,6 +456,13 @@
     renderNetwork();
   }
 
+  function applyResetReason(payload) {
+    var value = payload.state;
+    if (typeof value !== "string" || value === "") return;
+    state.resetReason = value;
+    text("diag-reset", value);
+  }
+
   function handleEvent(name, raw) {
     var payload;
     try {
@@ -473,15 +483,18 @@
 
     if (name !== "state") return;
 
-    switch (entityKey(payload.id)) {
-      case "temperature":
-        applyTemperature(payload);
-        break;
-      case "wifisignal":
-        applyRssi(payload);
-        break;
-      default:
-        break;
+    /* Match on substrings rather than exact ids: entityKey() already collapses
+     * every id shape the firmware has shipped into a bare key, and a substring
+     * test keeps working when a name gains a prefix (a second temperature
+     * probe, a device-qualified entity) without touching this table. */
+    var key = entityKey(payload.id);
+
+    if (key.indexOf("wifisignal") >= 0) {
+      applyRssi(payload);
+    } else if (key.indexOf("resetreason") >= 0) {
+      applyResetReason(payload);
+    } else if (key.indexOf("temperature") >= 0) {
+      applyTemperature(payload);
     }
   }
 

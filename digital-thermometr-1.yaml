@@ -98,6 +98,22 @@ sensor:
     id: wifi_rssi
     update_interval: 30s
 
+# The reset reason exists only in the boot log, which nobody is watching when a
+# device reboots by itself in the middle of the night. Exposing it as an entity
+# makes it readable at any time — the web interface shows it under Diagnostics
+# and Home Assistant can raise a notification on the unwanted reasons.
+# ESP.getResetReason() reads a value kept in RTC memory, so it stays valid for
+# the whole boot rather than only during startup.
+text_sensor:
+  - platform: template
+    id: reset_reason
+    name: "Reset Reason"
+    icon: "mdi:power-cycle"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return std::string(ESP.getResetReason().c_str());
+
 time:
   - platform: sntp
     id: sntp_time

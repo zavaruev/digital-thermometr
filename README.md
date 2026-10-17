@@ -43,8 +43,9 @@ a large temperature with a trend glyph, a heartbeat dot and the device IP.
 - live connection state with a liveness dot that pulses on every incoming
   sensor reading, so a device that stops publishing stops blinking;
 - signal strength;
-- everything diagnostic — RSSI, uptime, board, ROM code, pinout, host — sits
-  in a **Diagnostics** disclosure that is closed on first load;
+- everything diagnostic — RSSI, uptime, board, ROM code, pinout, host, and the
+  reset reason of the current boot — sits in a **Diagnostics** disclosure
+  that is closed on first load;
 - light and dark appearance, defaulting to the system preference with a
   manual override that persists;
 - no CDN, no web fonts, no analytics. The page is three small files served
@@ -163,7 +164,19 @@ runs `esphome compile` as an explicit step.
   minutes triggers a reboot, and the signal sits around −67 dBm. The `debug`
   component is enabled in the firmware specifically to report the reset reason
   at boot — that information exists only during the boot that caused it and
-  cannot be recovered afterwards.
+  cannot be recovered afterwards. The `Reset Reason` text sensor publishes the
+  same value continuously from `ESP.getResetReason()`, which is what the web
+  interface shows under Diagnostics; it reads RTC memory, so it stays valid for
+  the whole boot. After an OTA upload it reads `Software/System restart` by
+  definition — only an unexplained reboot tells you something. Home Assistant
+  can raise a notification on the reasons you do not expect.
+- **The OTA link is degrading.** A normal upload of this firmware takes about
+  7 seconds; one attempt on 2026-10-17 failed outright with
+  `ERROR receiving chunk result: Unknown error from ESP`, and the retry took
+  145.8 seconds to transfer the same 513 KB. That is a 20× swing on a
+  connection the device itself reports as `Fair` (−66 dBm), and it is the
+  strongest evidence so far that the problem is in the radio or the supply
+  rather than in the firmware.
 - **Two ESPHome warnings are still present** in the config and deliberately
   not addressed here: the `ota` block uses a password even though the native
   API already provides encryption (ESPHome suggests `encryption:` instead,
