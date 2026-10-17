@@ -11,6 +11,13 @@ substitutions:
 esp8266:
   board: nodemcuv2
 
+# Logs the reset reason (power-on / software / watchdog / exception / deep
+# sleep / external) together with heap and loop timing on every boot. Kept in on
+# purpose: the device reboots on its own every few hours and the reason exists
+# only during that boot, never afterwards. Drop this block once the cause is
+# identified.
+debug:
+
 # Enable logging
 logger:
 

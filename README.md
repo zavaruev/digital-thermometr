@@ -40,7 +40,9 @@ a large temperature with a trend glyph, a heartbeat dot and the device IP.
 - the reading is the interface: one large number, nothing competing with it;
 - a trend word (`Rising` / `Falling` / `Steady`) derived on the client using
   the same 0.1 °C threshold the firmware lambda uses;
-- live connection state and signal strength;
+- live connection state with a liveness dot that pulses on every incoming
+  sensor reading, so a device that stops publishing stops blinking;
+- signal strength;
 - everything diagnostic — RSSI, uptime, board, ROM code, pinout, host — sits
   in a **Diagnostics** disclosure that is closed on first load;
 - light and dark appearance, defaulting to the system preference with a
@@ -136,18 +138,44 @@ runs `esphome compile` as an explicit step.
 
 ## Known issues
 
-- **The sensor reading is not physically plausible.** A DS18B20 in free air
-  should read near room temperature; this one reports values in the tens of
-  degrees above ambient. The usual cause is parasitic power, a poor
-  connection or a long lead letting the sensor heat itself up. The wiring
-  needs attention before the displayed value means anything — this is a
-  hardware problem, not a firmware or interface one.
+- **The sensor reading drifts away from room temperature the longer the device
+  runs.** Freshly booted the DS18B20 reads a plausible 25.4–26.6 °C. Left
+  running for hours it climbs to 59–92 °C and stays there. Measured on this
+  hardware:
+
+  | Condition | Result |
+  |---|---|
+  | Baseline, 5 s read interval, 8 min | 26.25 → 26.00 °C (−1.9 °C/hour) |
+  | Experiment, 1 s read interval (5×), 7 min | 25.62 → 25.50 °C, flat |
+
+  Raising the read rate five times changed nothing, so this is **not** the
+  sensor drawing current on the 1-Wire bus for its own conversions. The effect
+  is time-dependent rather than rate-dependent, which points at the 3.3 V rail
+  sagging under load — the ESP8266 draws hundreds of milliamps while
+  transmitting and the sensor sits on the same rail — or heat soak from the
+  regulator into a sensor mounted close to the board. A DS18B20 run below its
+  ~1.1 V floor also reports garbage-high values, and a brown-out would be a
+  plausible companion cause for the spontaneous reboots below. Settle this at
+  the hardware level: measure supply voltage under load, then re-check.
+- **The device reboots on its own every few hours**, with no OTA in flight and
+  nothing in the logs before it. The config carries the default
+  `wifi: reboot_timeout: 15min`, so a WiFi association that fails for 15
+  minutes triggers a reboot, and the signal sits around −67 dBm. The `debug`
+  component is enabled in the firmware specifically to report the reset reason
+  at boot — that information exists only during the boot that caused it and
+  cannot be recovered afterwards.
 - **Two ESPHome warnings are still present** in the config and deliberately
   not addressed here: the `ota` block uses a password even though the native
   API already provides encryption (ESPHome suggests `encryption:` instead,
   and the plaintext fallback is removed in ESPHome 2027.3), and
   `captive_portal` is enabled without a `wifi: ap:` block, which makes the
   portal unreachable.
+
+**Checking firmware freshness.** The `compiled on <date>` line in the device
+log is not a reliable check: ESPHome derives it from a hash of the YAML alone,
+so it stays frozen across rebuilds that only change `thermometr_ui.js` or the
+CSS. Compare bytes instead — fetch `/0.js` from the device and hash it against
+the repository file.
 
 ## Credits
 

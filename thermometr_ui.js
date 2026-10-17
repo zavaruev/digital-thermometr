@@ -398,12 +398,37 @@
     text("status-label", online ? L.connected : L.offline);
   }
 
+  /* Restart the liveness animation from the top on every incoming state.
+   * Removing the class, forcing a reflow and re-adding it is what makes a
+   * short pulse restart even when events arrive faster than the animation;
+   * the animationend listener then takes the class back off so the pulse is a
+   * real transient rather than a class that sticks around forever. */
+  var pulseDot = null;
+
+  function pulseStatus() {
+    var dot = document.querySelector(".status__dot");
+    if (!dot) return;
+
+    if (pulseDot !== dot) {
+      pulseDot = dot;
+      dot.addEventListener("animationend", function () {
+        dot.classList.remove("status__dot--pulse");
+      });
+    }
+
+    dot.classList.remove("status__dot--pulse");
+    void dot.offsetWidth; /* force reflow so the animation replays */
+    dot.classList.add("status__dot--pulse");
+  }
+
   /* ------------------------------------------------------------------ *
    * Event stream
    * ------------------------------------------------------------------ */
   function applyTemperature(payload) {
     var value = temperatureFrom(payload);
     if (value === null) return;
+
+    pulseStatus();
 
     if (state.lastTemperature !== null) {
       var diff = value - state.lastTemperature;
@@ -423,6 +448,7 @@
   function applyRssi(payload) {
     var value = rssiFrom(payload);
     if (value === null) return;
+    pulseStatus();
     state.rssi = value;
     renderNetwork();
   }

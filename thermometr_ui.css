@@ -449,6 +449,47 @@ p {
   border-color: var(--body-on-dark);
 }
 
+/* Liveness pulse: restarted by JS on every state event, so the dot beats in
+ * time with the sensor actually being read rather than on a free-running
+ * timer. A device that stops publishing stops blinking. */
+.status__dot--pulse {
+  animation: status-pulse 900ms ease-out;
+}
+
+@keyframes status-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  15% {
+    transform: scale(2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Reduced motion: keep the cue, drop the movement — an opacity step reads as
+ * a blink without anything moving. !important matches the global override. */
+@media (prefers-reduced-motion: reduce) {
+  .status__dot--pulse {
+    animation-name: status-blink;
+    animation-duration: 700ms !important;
+  }
+}
+
+@keyframes status-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  35% {
+    opacity: 0.3;
+  }
+}
+
 .sub-nav-frosted {
   height: 52px;
   background: rgba(245, 245, 247, 0.8);
